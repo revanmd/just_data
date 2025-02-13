@@ -1,10 +1,10 @@
-library(raster)
+library(raster)     
 library(terra)
 library(zoo)         
 library(signal)
 library(entropy)
 
-setwd("/home/revanmdafa")
+setwd("C:/Users/rakhm/OneDrive/Documents/Mapping_Jatim/New_Model_UGM_Comm/Data")
 
 rasterOptions(progress = "Text", tmpdir = paste0(getwd(), "/tmp"))
 
@@ -13,20 +13,9 @@ ch <- stack('chirps_idn_monthly_202311_202410.tif')
 ter <- raster('ElevationExport.tif')
 
 # list data raster sen2-sen1 yang akan diolah
-setwd("/home/revanmdafa/data")
+setwd("C:/Users/rakhm/OneDrive/Documents/Mapping_Jatim/New_Model_UGM_Comm/Data/Loop_1/")
 raster_files <- list.files(getwd(), ".tif", full.names = T)
-# raster_files <- raster_files[1:2]
-
-#tambahan hnm
-n <- length(raster_files)
-get_raster_files <- function(raster_files, n) {
-  defa <- 1
-  if (n < defa) {
-    stop("raster files tidak ada.")
-  }
-  return(raster_files[1:n])
-}
-raster_files <- get_raster_files(raster_files, n)
+raster_files <- raster_files[1:15]
 
 # Define function to smooth and interpolate time series
 smooth_and_interpolate <- function(ts) {
@@ -64,39 +53,7 @@ for (file_index in seq_along(raster_files)) {
   # Load the raster stack
   cat("- Loading raster stack...\n")
   raster_stack <- stack(file)
-  #-----------------------------------------
-  #tambahan hnm
-  # Pastikan CRS sesuai sebelum resampling
-  ch_temp <- ch
-  ter_temp <- ter
   
-  if (!compareCRS(ch_temp, raster_stack)) {
-    ch_temp <- projectRaster(ch_temp, raster_stack)
-  }
-  if (!compareCRS(ter_temp, raster_stack)) {
-    ter_temp <- projectRaster(ter_temp, raster_stack)
-  }
-  
-  #tambahan hnm
-  # Validasi overlap
-  cat("- Validasi overlap\n")
-  overlap_extent_ch <- intersect(extent(ch_temp), extent(raster_stack))
-  overlap_extent_ter <- intersect(extent(ter_temp), extent(raster_stack))
-  
-  if (is.null(overlap_extent_ch) || is.null(overlap_extent_ter)) {
-    cat(sprintf("Skipping %s: tidak overlap.\n", basename(file)))
-    next
-  }
-  
-  # tambahan hnm
-  cat("Crop CHIRPS dan terrain agar sesuai extent Sentinel\n")
-  ch_cropped <- crop(ch_temp, raster_stack)
-  ter_cropped <- crop(ter_temp, raster_stack)
-
-  # buat uji
-  # cat("berhasil\n")
-  
-  #---------------------------------------
   # Get the number of bands per month and months
   num_bands <- 10     
   num_months <- 12
@@ -154,8 +111,8 @@ for (file_index in seq_along(raster_files)) {
   vh_en <- stack(app(rast(VH), fun = calculate_entropy))
   
   # Resample CH + Terain
-  ch_crop <- raster::resample(ch_cropped, vh_st, 'bilinear')
-  ter_crop <- raster::resample(ter_cropped, vh_st, 'bilinear')
+  ch_crop <- raster::resample(ch, vh_st, 'bilinear')
+  ter_crop <- raster::resample(ter, vh_st, 'bilinear')
   slope_cr <- terrain(ter_crop, opt = 'slope', unit = 'degrees')
   aspect_cr <- terrain(ter_crop, opt = 'aspect', unit = 'degrees')
   ter_crop <- stack(ter_crop, slope_cr, aspect_cr)
@@ -180,8 +137,4 @@ for (file_index in seq_along(raster_files)) {
   
   
   cat(sprintf("- Finished processing %s\n", basename(file)))
-  
-  
- 
 }
-
